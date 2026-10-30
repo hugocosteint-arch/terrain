@@ -415,6 +415,7 @@
 
         let recognition = null;
         let isListening = false;
+        let finalTranscriptGlobal = ''; 
 
         function toggleSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -425,6 +426,7 @@
             }
 
             if (isListening) {
+                isListening = false;
                 if (recognition) recognition.stop();
                 stopMicUI();
                 return;
@@ -433,62 +435,68 @@
             try {
                 recognition = new SpeechRecognition();
                 recognition.lang = 'fr-FR';
-                recognition.continuous = false; 
+                recognition.continuous = true; 
                 recognition.interimResults = true;
+                recognition.maxAlternatives = 1; 
 
                 const micBtn = document.getElementById('mic-btn');
                 const micStatus = document.getElementById('mic-status');
                 const noteInput = document.getElementById('note-input');
                 
-                let startText = noteInput.value;
+                let baseText = noteInput.value.trim();
+                finalTranscriptGlobal = ''; 
 
                 recognition.onstart = function() {
                     isListening = true;
                     micBtn.classList.add('listening');
-                    micStatus.textContent = "🎙️ Écoute en cours... Parlez !";
+                    micStatus.textContent = "🎙️ Écoute en cours...";
                 };
 
                 recognition.onresult = function(event) {
                     let interimTranscript = '';
-                    let finalTranscript = '';
+                    finalTranscriptGlobal = '';
 
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                    for (let i = 0; i < event.results.length; i++) {
                         if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
+                            finalTranscriptGlobal += event.results[i][0].transcript;
                         } else {
                             interimTranscript += event.results[i][0].transcript;
                         }
                     }
                     
-                    noteInput.value = startText + (startText ? " " : "") + finalTranscript + interimTranscript;
+                    let newText = baseText;
+                    if (newText && (finalTranscriptGlobal || interimTranscript)) newText += " ";
+                    newText += finalTranscriptGlobal + interimTranscript;
                     
-                    if (finalTranscript !== '') {
-                        startText = noteInput.value;
-                    }
+                    noteInput.value = newText;
                 };
 
                 recognition.onerror = function(event) {
                     console.error("Erreur Micro :", event.error);
-                    stopMicUI();
-                    
                     if (event.error === 'not-allowed') {
-                        alert("Accès au micro refusé. Avez-vous autorisé l'utilisation du microphone sur cette page ?");
-                    } else if (event.error === 'no-speech') {
-                        showToast("Aucune voix détectée.");
-                    } else {
-                        alert("Erreur Micro : " + event.error);
+                        isListening = false;
+                        stopMicUI();
+                        alert("Accès au micro refusé.");
                     }
                 };
 
                 recognition.onend = function() {
-                    stopMicUI();
+                    if (isListening) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            stopMicUI();
+                        }
+                    } else {
+                        stopMicUI();
+                    }
                 };
 
                 recognition.start();
 
             } catch (err) {
                 console.error("Exception micro :", err);
-                alert("Impossible de lancer le micro.");
+                isListening = false;
                 stopMicUI();
             }
         }
