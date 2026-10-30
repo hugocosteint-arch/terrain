@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saisie Terrain - Mobile</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #aaaaaa;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+        }
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h1, h2 {
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        p.subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background-color: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            margin-top: 10px;
+            font-size: 0.85rem;
+            padding: 8px;
+        }
+
+        .mic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .mic-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #333;
+            border: 2px solid var(--border);
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .mic-btn.listening {
+            background-color: var(--danger);
+            border-color: #f87171;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.08); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .mic-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        #loader {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-size: 1.1rem;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-screen" class="screen active">
+            <div class="card" style="margin-top: 40px;">
+                <h1>Connexion Terrain</h1>
+                <p class="subtitle">Entrez vos identifiants pour accéder à votre espace Google Sheet.</p>
+                
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" required placeholder="ex: hugo">
+
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" required placeholder="••••">
+
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Se connecter</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="app-screen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <h1 style="margin: 0; font-size: 1.1rem;">📝 Saisie Terrain</h1>
+                <span id="user-display" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+            </div>
+            <p class="subtitle" id="sheet-info-text">Connecté à votre espace Drive</p>
+
+            <div class="card">
+                <h2>1. Client / Projet</h2>
+                <p class="subtitle">Sélectionnez le client concerné (Onglet destination)</p>
+                <select id="client-select">
+                </select>
+            </div>
+
+            <div class="card">
+                <h2>2. Cible (Recherche dynamique)</h2>
+                <p class="subtitle">Tapez les premières lettres pour filtrer la cible</p>
+                
+                <input type="text" id="cible-input" list="cibles-list" placeholder="Rechercher une cible (ex: nestlé, hermes...)" autocomplete="off">
+                <datalist id="cibles-list">
+                </datalist>
+            </div>
+
+            <div class="card">
+                <h2>3. Compte-rendu & Notes</h2>
+                <p class="subtitle">Écrivez ou dictez votre compte-rendu terrain</p>
+                
+                <textarea id="note-input" rows="5" placeholder="Tapez votre compte-rendu ici ou utilisez le micro..."></textarea>
+                
+                <div class="mic-container">
+                    <button type="button" id="mic-btn" class="mic-btn" onclick="toggleSpeechRecognition()" title="Dicter">
+                        🎙️
+                    </button>
+                    <span id="mic-status" class="mic-status">Appuyez pour dicter</span>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="saveNoteToSheet()" style="background-color: var(--success); margin-bottom: 10px;">
+                💾 Enregistrer dans le Google Sheet
+            </button>
+
+            <button type="button" class="btn btn-danger" onclick="logout()">
+                Déconnexion
+            </button>
+        </div>
+    </div>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <span id="loader-text">Connexion en cours...</span>
+    </div>
+
+    <div id="toast" class="toast">Action effectuée</div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyZj_1ELfyWjNg8PCwOFHxWyk9bnMtv2Y_JVyCHYDGkE86Qus38dF05pozDH0CxZ6kyuw/exec";
+
+        let sessionData = {
+            username: "",
+            userSheetUrl: "",
+            clients: [],
+            cibles: []
+        };
+
+        async function sendToAppsScript(payload) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8"
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const textResponse = await response.text();
+                try {
+                    return JSON.parse(textResponse);
+                } catch (jsonErr) {
+                    throw new Error("Le serveur a renvoyé du texte non-JSON : " + textResponse);
+                }
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+
+            showLoader("Vérification des identifiants...");
+
+            try {
+                const result = await sendToAppsScript({
+                    action: "login",
+                    username: usernameInput,
+                    password: passwordInput
+                });
+
+                hideLoader();
+
+                if (result && result.status === "success") {
+                    sessionData.username = usernameInput;
+                    sessionData.userSheetUrl = result.userSheetUrl;
+                    sessionData.clients = result.clients || [];
+                    sessionData.cibles = result.cibles || [];
+
+                    localStorage.setItem("terrain_session", JSON.stringify(sessionData));
+
+                    initAppInterface();
+                    switchScreen('app-screen');
+                    showToast("Connexion réussie !");
+                } else {
+                    alert(result ? result.message : "Erreur inconnue du serveur.");
+                }
+            } catch (err) {
+                hideLoader();
+                alert("Erreur de connexion : " + err.message);
+            }
+        }
+
+        function initAppInterface() {
+            document.getElementById('user-display').innerText = `Utilisateur : ${sessionData.username}`;
+            
+            const clientSelect = document.getElementById('client-select');
+            clientSelect.innerHTML = "";
+            if (sessionData.clients.length === 0) {
+                clientSelect.innerHTML = `<option value="">Aucun client trouvé</option>`;
+            } else {
+                sessionData.clients.forEach(client => {
+                    let opt = document.createElement('option');
+                    opt.value = client;
+                    opt.textContent = client;
+                    clientSelect.appendChild(opt);
+                });
+            }
+
+            const ciblesList = document.getElementById('cibles-list');
+            ciblesList.innerHTML = "";
+            if (sessionData.cibles && sessionData.cibles.length > 0) {
+                sessionData.cibles.forEach(cible => {
+                    let opt = document.createElement('option');
+                    opt.value = cible;
+                    ciblesList.appendChild(opt);
+                });
+            }
+        }
+
+        async function saveNoteToSheet() {
+            const clientSheetName = document.getElementById('client-select').value;
+            const cible = document.getElementById('cible-input').value.trim();
+            const noteText = document.getElementById('note-input').value.trim();
+
+            if (!clientSheetName) {
+                alert("Veuillez sélectionner un client.");
+                return;
+            }
+            if (!cible) {
+                alert("Veuillez saisir ou sélectionner une cible.");
+                return;
+            }
+            if (!noteText) {
+                alert("Veuillez écrire ou dicter une note avant d'enregistrer.");
+                return;
+            }
+
+            showLoader("Enregistrement dans votre Google Sheet...");
+
+            try {
+                const result = await sendToAppsScript({
+                    action: "saveNote",
+                    userSheetUrl: sessionData.userSheetUrl,
+                    clientSheetName: clientSheetName,
+                    cible: cible,
+                    noteText: noteText
+                });
+
+                hideLoader();
+
+                if (result && result.status === "success") {
+                    showToast("Note enregistrée avec succès !");
+                    document.getElementById('note-input').value = "";
+                    document.getElementById('cible-input').value = "";
+                } else {
+                    alert("Erreur lors de l'enregistrement : " + (result ? result.message : "Erreur inconnue"));
+                }
+            } catch (err) {
+                hideLoader();
+                alert("Erreur réseau : " + err.message);
+            }
+        }
+
+        let recognition = null;
+        let isListening = false;
+
+        function toggleSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert("La dictée vocale n'est pas supportée par ce navigateur.");
+                return;
+            }
+
+            if (isListening) {
+                if (recognition) recognition.stop();
+                stopMicUI();
+                return;
+            }
+
+            try {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'fr-FR';
+                recognition.continuous = false; 
+                recognition.interimResults = true;
+
+                const micBtn = document.getElementById('mic-btn');
+                const micStatus = document.getElementById('mic-status');
+                const noteInput = document.getElementById('note-input');
+                
+                let startText = noteInput.value;
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    micBtn.classList.add('listening');
+                    micStatus.textContent = "🎙️ Écoute en cours... Parlez !";
+                };
+
+                recognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    
+                    noteInput.value = startText + (startText ? " " : "") + finalTranscript + interimTranscript;
+                    
+                    if (finalTranscript !== '') {
+                        startText = noteInput.value;
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error("Erreur Micro :", event.error);
+                    stopMicUI();
+                    
+                    if (event.error === 'not-allowed') {
+                        alert("Accès au micro refusé. Avez-vous autorisé l'utilisation du microphone sur cette page ?");
+                    } else if (event.error === 'no-speech') {
+                        showToast("Aucune voix détectée.");
+                    } else {
+                        alert("Erreur Micro : " + event.error);
+                    }
+                };
+
+                recognition.onend = function() {
+                    stopMicUI();
+                };
+
+                recognition.start();
+
+            } catch (err) {
+                console.error("Exception micro :", err);
+                alert("Impossible de lancer le micro.");
+                stopMicUI();
+            }
+        }
+
+        function stopMicUI() {
+            isListening = false;
+            const micBtn = document.getElementById('mic-btn');
+            const micStatus = document.getElementById('mic-status');
+            if (micBtn) micBtn.classList.remove('listening');
+            if (micStatus) micStatus.textContent = "Appuyez pour dicter";
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function logout() {
+            localStorage.removeItem("terrain_session");
+            sessionData = { username: "", userSheetUrl: "", clients: [], cibles: [] };
+            document.getElementById('username').value = "";
+            document.getElementById('password').value = "";
+            switchScreen('login-screen');
+            showToast("Déconnecté");
+        }
+
+        function showLoader(text) {
+            document.getElementById('loader-text').innerText = text;
+            document.getElementById('loader').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        window.onload = function() {
+            const saved = localStorage.getItem("terrain_session");
+            if (saved) {
+                try {
+                    sessionData = JSON.parse(saved);
+                    if (sessionData.username && sessionData.userSheetUrl) {
+                        initAppInterface();
+                        switchScreen('app-screen');
+                    }
+                } catch (e) {
+                    localStorage.removeItem("terrain_session");
+                }
+            }
+        };
+    </script>
+</body>
+</html>
